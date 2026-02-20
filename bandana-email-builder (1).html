@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bandana Email Builder</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #222222;
+    --border: #2a2a2a;
+    --border-focus: #FCE776;
+    --text: #e8e8e8;
+    --text-dim: #888888;
+    --accent: #FCE776;
+    --accent-hover: #fdd835;
+    --danger: #ff6b6b;
+    --success: #4ecdc4;
+  }
+
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  .header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 20px 32px; display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .header-logo {
+    width: 32px; height: 32px; background: var(--accent); border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 18px; color: #000;
+  }
+  .header h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
+  .header h1 span { color: var(--accent); }
+
+  .container {
+    max-width: 1400px; margin: 0 auto; padding: 32px;
+    display: grid; grid-template-columns: 1fr 500px; gap: 32px;
+  }
+  @media (max-width: 1100px) { .container { grid-template-columns: 1fr; } }
+
+  .input-panel { display: flex; flex-direction: column; gap: 20px; }
+  .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-dim); margin-bottom: 4px; }
+
+  .job-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px; transition: border-color 0.2s;
+  }
+  .job-card:focus-within { border-color: var(--border-focus); }
+  .job-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .job-number {
+    font-size: 12px; font-weight: 700; background: var(--accent); color: #000;
+    width: 24px; height: 24px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .job-status {
+    font-size: 11px; font-weight: 500; padding: 4px 10px;
+    border-radius: 20px; background: var(--surface2); color: var(--text-dim); transition: all 0.2s;
+  }
+  .job-status.loaded { background: rgba(78,205,196,0.15); color: var(--success); }
+  .job-status.error { background: rgba(255,107,107,0.15); color: var(--danger); }
+  .job-status.fetching { background: rgba(252,231,118,0.15); color: var(--accent); }
+  .job-status.verified { background: rgba(78,205,196,0.25); color: var(--success); }
+
+  .url-row { display: flex; gap: 8px; margin-bottom: 16px; }
+  .url-row input { flex: 1; }
+
+  input, select {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px; font-family: inherit; font-size: 13px;
+    color: var(--text); outline: none; transition: border-color 0.2s, background 0.2s; width: 100%;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  input::placeholder { color: #555; }
+  input.autofilled { border-color: rgba(78,205,196,0.4); background: rgba(78,205,196,0.05); }
+
+  .btn-fetch {
+    background: var(--accent); color: #000; border: none; border-radius: 8px;
+    padding: 10px 16px; font-family: inherit; font-size: 13px; font-weight: 600;
+    cursor: pointer; white-space: nowrap; transition: background 0.15s;
+  }
+  .btn-fetch:hover { background: var(--accent-hover); }
+  .btn-fetch:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .detail-grid .full-width { grid-column: 1 / -1; }
+  .field-group { display: flex; flex-direction: column; gap: 4px; }
+  .field-label { font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .logo-preview {
+    display: flex; align-items: center; gap: 10px;
+    margin-top: 12px; padding: 10px; background: var(--bg); border-radius: 8px;
+  }
+  .logo-preview img { width: 36px; height: 36px; border-radius: 8px; background: #f0f0f0; }
+  .logo-preview span { font-size: 12px; color: var(--text-dim); word-break: break-all; }
+
+  .id-verify {
+    margin-bottom: 12px; padding: 8px 12px; border-radius: 8px;
+    font-size: 11px; font-weight: 500; display: none;
+  }
+  .id-verify.match { display: block; background: rgba(78,205,196,0.1); border: 1px solid rgba(78,205,196,0.3); color: var(--success); }
+  .id-verify.mismatch { display: block; background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.3); color: var(--danger); }
+
+  .preview-panel { position: sticky; top: 90px; align-self: start; display: flex; flex-direction: column; gap: 16px; }
+  .preview-frame { background: #ffffff; border-radius: 12px; overflow: hidden; max-height: 600px; overflow-y: auto; }
+  .preview-frame::-webkit-scrollbar { width: 6px; }
+  .preview-frame::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+
+  .action-buttons { display: flex; gap: 10px; }
+  .btn-generate {
+    flex: 1; background: var(--accent); color: #000; border: none; border-radius: 10px;
+    padding: 14px 24px; font-family: inherit; font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: all 0.15s; letter-spacing: -0.2px;
+  }
+  .btn-generate:hover { background: var(--accent-hover); transform: translateY(-1px); }
+  .btn-copy {
+    background: var(--surface); color: var(--text); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 20px; font-family: inherit;
+    font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+  }
+  .btn-copy:hover { border-color: var(--accent); color: var(--accent); }
+
+  .toast {
+    position: fixed; bottom: 32px; right: 32px; background: var(--success); color: #000;
+    padding: 12px 24px; border-radius: 10px; font-weight: 600; font-size: 14px;
+    transform: translateY(100px); opacity: 0; transition: all 0.3s ease; z-index: 999;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  .clear-btn {
+    background: none; border: none; color: var(--danger); font-size: 11px; font-weight: 600;
+    cursor: pointer; padding: 4px 8px; border-radius: 4px; transition: background 0.15s;
+  }
+  .clear-btn:hover { background: rgba(255,107,107,0.1); }
+
+  .instructions {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px;
+  }
+  .instructions h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--accent); }
+  .instructions ol { padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+  .instructions li { font-size: 13px; color: var(--text-dim); line-height: 1.5; }
+  .instructions code { background: var(--bg); padding: 2px 6px; border-radius: 4px; font-size: 12px; color: var(--accent); }
+
+  .schema-raw {
+    margin-top: 8px; font-size: 11px; color: var(--text-dim);
+    background: var(--bg); padding: 8px; border-radius: 6px;
+    max-height: 100px; overflow-y: auto; display: none;
+    font-family: monospace; word-break: break-all; white-space: pre-wrap;
+  }
+  .schema-raw.visible { display: block; }
+  .toggle-raw {
+    background: none; border: none; color: var(--text-dim); font-size: 11px;
+    cursor: pointer; padding: 4px 0; text-decoration: underline; margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="header-logo">B</div>
+    <h1>Bandana <span>Email Builder</span></h1>
+  </div>
+</div>
+
+<div class="container">
+  <div class="input-panel">
+    <div class="instructions">
+      <h3>How to use</h3>
+      <ol>
+        <li>Paste a <code>bandana.com/jobs/...</code> URL → click <strong>Fetch</strong></li>
+        <li>Reads the <code>&lt;script type="application/ld+json"&gt;</code> <strong>JobPosting</strong> schema from the page</li>
+        <li>Extracts <strong>title, company, salary, location</strong> and <strong>verifies the job ID</strong> matches your URL</li>
+        <li>Logo auto-loads from <code>logo.dev</code> — edit domain to fix</li>
+        <li><strong>Generate Email</strong> → <strong>Copy HTML</strong> → paste into SendGrid code block</li>
+      </ol>
+    </div>
+
+    <div style="margin-bottom: 12px;">
+      <div class="field-group">
+        <span class="field-label">Greeting Text</span>
+        <input type="text" id="greeting" value="Here are today's jobs recommended for you:" placeholder="e.g. Here are today's remote jobs...">
+      </div>
+    </div>
+
+    <div id="job-cards"></div>
+  </div>
+
+  <div class="preview-panel">
+    <div class="section-label">Email Preview</div>
+    <div class="preview-frame" id="preview-frame">
+      <div style="padding: 40px 20px; text-align: center; color: #aaa; font-size: 14px;">
+        Fill in jobs and click "Generate Email"
+      </div>
+    </div>
+    <div class="action-buttons">
+      <button class="btn-generate" onclick="generateEmail()">Generate Email</button>
+      <button class="btn-copy" onclick="copyHTML()">Copy HTML</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const LOGO_TOKEN = 'live_6a1a28fd-6420-4492-aeb0-b297461d9de2';
+const NUM_JOBS = 5;
+let generatedHTML = '';
+
+const PROXIES = [
+  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+];
+
+const KNOWN_DOMAINS = {
+  'mta':'mta.info','metropolitan transportation authority':'mta.info',
+  'cvs':'cvs.com','cvs health':'cvs.com','walmart':'walmart.com','amazon':'amazon.com',
+  'target':'target.com','costco':'costco.com','ups':'ups.com','fedex':'fedex.com',
+  'usps':'usps.com','home depot':'homedepot.com','the home depot':'homedepot.com',
+  'lowes':'lowes.com',"lowe's":'lowes.com','starbucks':'starbucks.com',
+  'mcdonalds':'mcdonalds.com',"mcdonald's":'mcdonalds.com','chipotle':'chipotle.com',
+  'patreon':'patreon.com','dropbox':'dropbox.com','ramp':'ramp.com',
+  'squire':'getsquire.com','earnest':'earnest.com',
+  'nyc health + hospitals':'nychealthandhospitals.org','city of new york':'nyc.gov',
+  'nypd':'nyc.gov','dsny':'nyc.gov','included health':'includedhealth.com',
+  'enterprise mobility':'enterpriseholdings.com','jpmorgan chase':'jpmorganchase.com',
+  'bank of america':'bankofamerica.com','wells fargo':'wellsfargo.com',
+  'google':'google.com','meta':'meta.com','apple':'apple.com','microsoft':'microsoft.com',
+  'netflix':'netflix.com',
+};
+
+function init() {
+  const c = document.getElementById('job-cards');
+  for (let i = 1; i <= NUM_JOBS; i++) c.innerHTML += jobCardHTML(i);
+}
+
+function jobCardHTML(n) {
+  return `
+    <div class="job-card" id="card-${n}">
+      <div class="job-card-header">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="job-number">${n}</div>
+          <span style="font-size:14px;font-weight:600;">Job ${n}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="job-status" id="status-${n}">Empty</span>
+          <button class="clear-btn" onclick="clearJob(${n})">Clear</button>
+        </div>
+      </div>
+      <div class="url-row">
+        <input type="text" id="url-${n}" placeholder="https://bandana.com/jobs/..." onkeydown="if(event.key==='Enter')fetchJob(${n})">
+        <button class="btn-fetch" id="fetch-btn-${n}" onclick="fetchJob(${n})">Fetch</button>
+      </div>
+      <div class="id-verify" id="id-verify-${n}"></div>
+      <div class="detail-grid">
+        <div class="field-group full-width">
+          <span class="field-label">Job Title</span>
+          <input type="text" id="title-${n}" placeholder="e.g. Administrative Assistant">
+        </div>
+        <div class="field-group">
+          <span class="field-label">Company Name</span>
+          <input type="text" id="company-${n}" placeholder="e.g. MTA" oninput="autoGuessDomain(${n})">
+        </div>
+        <div class="field-group">
+          <span class="field-label">Company Domain (for logo)</span>
+          <input type="text" id="domain-${n}" placeholder="e.g. mta.info" oninput="updateLogoPreview(${n})">
+        </div>
+        <div class="field-group">
+          <span class="field-label">Salary / Pay</span>
+          <input type="text" id="salary-${n}" placeholder="e.g. $25.76 - $38.70/hr">
+        </div>
+        <div class="field-group">
+          <span class="field-label">Location</span>
+          <input type="text" id="location-${n}" placeholder="e.g. 2 Broadway, Financial District">
+        </div>
+      </div>
+      <div class="logo-preview" id="logo-preview-${n}">
+        <img id="logo-img-${n}" src="https://img.logo.dev/bandana.com?token=${LOGO_TOKEN}&size=128&retina=false&format=png&theme=dark" alt="">
+        <span id="logo-url-${n}">Set company domain to load logo</span>
+      </div>
+      <button class="toggle-raw" onclick="document.getElementById('schema-raw-${n}').classList.toggle('visible')">Show raw schema</button>
+      <div class="schema-raw" id="schema-raw-${n}"></div>
+    </div>`;
+}
+
+function extractJobId(url) {
+  const m = url.match(/\/jobs\/([a-f0-9-]{36})/i);
+  return m ? m[1] : null;
+}
+
+async function fetchWithProxy(url) {
+  for (const pf of PROXIES) {
+    try {
+      const r = await fetch(pf(url), { signal: AbortSignal.timeout(12000) });
+      if (r.ok) { const t = await r.text(); if (t.length > 500) return t; }
+    } catch (e) { continue; }
+  }
+  throw new Error('All proxies failed');
+}
+
+function extractJobPostingSchemas(html) {
+  const schemas = [];
+  const re = /<script[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    try {
+      const d = JSON.parse(m[1].trim());
+      const items = Array.isArray(d) ? d : [d];
+      for (const it of items) {
+        if (it['@type'] === 'JobPosting') schemas.push(it);
+        if (it['@graph']) it['@graph'].forEach(g => { if (g['@type'] === 'JobPosting') schemas.push(g); });
+      }
+    } catch (e) {}
+  }
+  return schemas;
+}
+
+function formatSalary(bs) {
+  if (!bs) return '';
+  const v = bs.value;
+  if (!v) return '';
+  let amount = '', unit = '';
+  if (typeof v === 'object') {
+    const ut = (v.unitText || '').toUpperCase();
+    unit = ut === 'HOUR' ? '/hr' : ut === 'YEAR' ? '/yr' : ut === 'MONTH' ? '/mo' : '';
+    if (v.minValue != null && v.maxValue != null) amount = `$${Number(v.minValue).toFixed(2)} - $${Number(v.maxValue).toFixed(2)}`;
+    else if (v.value != null) amount = `$${Number(v.value).toFixed(2)}`;
+    else if (v.minValue != null) amount = `$${Number(v.minValue).toFixed(2)}+`;
+  } else if (typeof v === 'number') { amount = `$${v.toFixed(2)}`; }
+  return amount ? `${amount}${unit}` : '';
+}
+
+function formatLocation(jl) {
+  if (!jl) return '';
+  const loc = Array.isArray(jl) ? jl[0] : jl;
+  if (!loc) return '';
+  const addr = loc.address;
+  if (!addr) return loc.name || '';
+  if (typeof addr === 'string') return addr;
+  return [addr.streetAddress, addr.addressLocality, addr.addressRegion].filter(Boolean).join(', ');
+}
+
+function extractDomain(org) {
+  if (!org) return '';
+  for (const key of ['sameAs','url']) {
+    if (org[key]) {
+      try { return new URL(org[key].startsWith('http') ? org[key] : `https://${org[key]}`).hostname.replace(/^www\./,''); } catch(e){}
+    }
+  }
+  return '';
+}
+
+function guessDomain(company) {
+  const l = company.toLowerCase().trim();
+  return KNOWN_DOMAINS[l] || l.replace(/[^a-z0-9]/g,'') + '.com';
+}
+
+async function fetchJob(n) {
+  const urlInput = document.getElementById(`url-${n}`).value.trim();
+  if (!urlInput || !urlInput.includes('bandana.com/jobs/')) { setStatus(n,'Invalid URL','error'); return; }
+  const urlJobId = extractJobId(urlInput);
+  if (!urlJobId) { setStatus(n,'No job ID in URL','error'); return; }
+
+  const btn = document.getElementById(`fetch-btn-${n}`);
+  btn.disabled = true; btn.textContent = '...';
+  setStatus(n,'Fetching...','fetching');
+  const verifyEl = document.getElementById(`id-verify-${n}`);
+  verifyEl.className = 'id-verify'; verifyEl.style.display = 'none';
+
+  try {
+    const html = await fetchWithProxy(urlInput);
+    const schemas = extractJobPostingSchemas(html);
+    const rawEl = document.getElementById(`schema-raw-${n}`);
+    rawEl.textContent = schemas.length ? JSON.stringify(schemas[0], null, 2) : 'No JobPosting schema found';
+
+    if (!schemas.length) {
+      // Title fallback
+      const tm = html.match(/<title[^>]*>(.*?)<\/title>/i);
+      if (tm) {
+        const parts = tm[1].replace(/&amp;/g,'&').replace(/&#39;/g,"'").split(' - ');
+        if (parts.length >= 2) {
+          setField(n,'company',parts[0].replace(/\s*Jobs?\s*$/i,'').trim());
+          setField(n,'title',parts[1]?.trim()||'');
+          if (parts.length > 2) setField(n,'location',parts.slice(2).join(', ').trim());
+          document.getElementById(`domain-${n}`).value = guessDomain(parts[0].replace(/\s*Jobs?\s*$/i,'').trim());
+          updateLogoPreview(n);
+        }
+      }
+      setStatus(n,'No schema — title fallback','loaded');
+      btn.disabled = false; btn.textContent = 'Fetch'; return;
+    }
+
+    const s = schemas[0];
+
+    // *** ID VERIFICATION ***
+    let schemaId = '';
+    if (s.identifier) schemaId = typeof s.identifier === 'string' ? s.identifier : (s.identifier.value || '');
+    if (!schemaId) schemaId = s['@id'] || s.url || '';
+
+    let idVerified = false;
+    const schemaIdStr = String(schemaId);
+    const schemaUrl = s.url || s['@id'] || '';
+
+    if (schemaIdStr.includes(urlJobId) || schemaUrl.includes(urlJobId)) {
+      idVerified = true;
+      verifyEl.className = 'id-verify match';
+      verifyEl.innerHTML = `✅ <strong>ID Verified</strong> — Schema matches URL job ID: <code style="font-size:10px;background:rgba(78,205,196,0.15);padding:2px 6px;border-radius:3px;">${urlJobId}</code>`;
+    } else if (schemaIdStr || schemaUrl) {
+      verifyEl.className = 'id-verify mismatch';
+      verifyEl.innerHTML = `⚠️ <strong>Check ID</strong> — URL: <code style="font-size:10px">${urlJobId}</code> vs Schema: <code style="font-size:10px">${schemaIdStr || schemaUrl}</code>`;
+    } else {
+      idVerified = true;
+      verifyEl.className = 'id-verify match';
+      verifyEl.innerHTML = `✅ <strong>Data loaded</strong> from correct URL (no schema ID to cross-check)`;
+    }
+    verifyEl.style.display = 'block';
+
+    // Extract & fill
+    const title = s.title || s.name || '';
+    const org = s.hiringOrganization || {};
+    const company = org.name || '';
+    const salary = formatSalary(s.baseSalary);
+    const location = formatLocation(s.jobLocation);
+    const domain = extractDomain(org) || guessDomain(company);
+
+    if (title) setField(n,'title',title);
+    if (company) setField(n,'company',company);
+    if (salary) setField(n,'salary',salary);
+    if (location) setField(n,'location',location);
+    if (domain) { document.getElementById(`domain-${n}`).value = domain; document.getElementById(`domain-${n}`).classList.add('autofilled'); updateLogoPreview(n); }
+
+    setStatus(n, idVerified ? 'Verified ✓' : 'Loaded (check ID)', idVerified ? 'verified' : 'loaded');
+
+  } catch (err) {
+    console.error(err);
+    setStatus(n,'Fetch failed — fill manually','error');
+  }
+
+  btn.disabled = false; btn.textContent = 'Fetch';
+}
+
+function setField(n,field,val) {
+  const el = document.getElementById(`${field}-${n}`);
+  el.value = val; el.classList.add('autofilled');
+  setTimeout(() => el.classList.remove('autofilled'), 3000);
+}
+function setStatus(n,txt,cls) {
+  const el = document.getElementById(`status-${n}`);
+  el.textContent = txt; el.className = 'job-status' + (cls ? ` ${cls}` : '');
+}
+function autoGuessDomain(n) {
+  const c = document.getElementById(`company-${n}`).value.trim();
+  const d = document.getElementById(`domain-${n}`);
+  if (c && !d.dataset.manual) { d.value = guessDomain(c); updateLogoPreview(n); }
+}
+function updateLogoPreview(n) {
+  const domain = document.getElementById(`domain-${n}`).value.trim();
+  if (domain) {
+    document.getElementById(`logo-img-${n}`).src = `https://img.logo.dev/${domain}?token=${LOGO_TOKEN}&size=128&retina=false&format=png&theme=dark`;
+    document.getElementById(`logo-url-${n}`).textContent = domain;
+    document.getElementById(`domain-${n}`).dataset.manual = 'true';
+  }
+}
+function clearJob(n) {
+  ['url','title','company','domain','salary','location'].forEach(f => {
+    const el = document.getElementById(`${f}-${n}`); el.value = ''; el.classList.remove('autofilled');
+  });
+  document.getElementById(`logo-img-${n}`).src = `https://img.logo.dev/bandana.com?token=${LOGO_TOKEN}&size=128&retina=false&format=png&theme=dark`;
+  document.getElementById(`logo-url-${n}`).textContent = 'Set company domain';
+  document.getElementById(`id-verify-${n}`).style.display = 'none';
+  document.getElementById(`schema-raw-${n}`).textContent = '';
+  document.getElementById(`schema-raw-${n}`).classList.remove('visible');
+  delete document.getElementById(`domain-${n}`).dataset.manual;
+  setStatus(n,'Empty','');
+}
+
+function hasJobAfter(i) {
+  for (let j = i+1; j <= NUM_JOBS; j++) {
+    if (document.getElementById(`title-${j}`).value.trim() || document.getElementById(`company-${j}`).value.trim()) return true;
+  }
+  return false;
+}
+
+function generateEmail() {
+  const greeting = document.getElementById('greeting').value || "Here are today's jobs recommended for you:";
+  let jobsHTML = '', count = 0;
+
+  for (let i = 1; i <= NUM_JOBS; i++) {
+    const title = document.getElementById(`title-${i}`).value.trim();
+    const company = document.getElementById(`company-${i}`).value.trim();
+    const domain = document.getElementById(`domain-${i}`).value.trim();
+    const salary = document.getElementById(`salary-${i}`).value.trim();
+    const location = document.getElementById(`location-${i}`).value.trim();
+    const url = document.getElementById(`url-${i}`).value.trim() || 'https://bandana.com/search';
+    if (!title && !company) continue;
+    count++;
+
+    const logo = domain ? `https://img.logo.dev/${domain}?token=${LOGO_TOKEN}&size=128&retina=false&format=png&theme=dark` : `https://img.logo.dev/bandana.com?token=${LOGO_TOKEN}&size=128&retina=false&format=png&theme=dark`;
+    const compLoc = [company, location].filter(Boolean).join(' · ');
+    const divider = hasJobAfter(i) ? `\n              <table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td style="border-bottom: 1px solid #f0ede6;"></td></tr></table>` : '';
+    const pad = count === 1 ? 'padding-bottom: 0;' : 'padding-top: 16px;';
+
+    jobsHTML += `
+          <tr>
+            <td style="${pad}">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" class="job-row">
+                <tr>
+                  <td colspan="2" style="padding-bottom: 8px;">
+                    <a href="${url}" target="_blank" class="job-title" style="font-size: 15px; font-weight: 700; color: #191919; text-decoration: none;">${title||'Job Title'}</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="vertical-align: middle; padding-bottom: 20px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="vertical-align: middle; padding-right: 10px;">
+                          <img src="${logo}" alt="" width="36" height="36" style="display: block; border-radius: 8px; background: #f0f0f0;" />
+                        </td>
+                        <td style="vertical-align: middle;">
+                          <p style="margin: 0; font-size: 13px; color: #525252; line-height: 1.3;">${compLoc||'Company'}</p>
+                          <p style="margin: 2px 0 0 0; font-size: 13px; font-weight: 600; color: #191919;">${salary||'View Pay'}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td align="right" style="vertical-align: middle; padding-bottom: 20px;">
+                    <a href="${url}" target="_blank" class="btn-details" style="display: inline-block; padding: 8px 18px; border: 1.5px solid #d4d0c8; border-radius: 8px; font-size: 13px; font-weight: 600; color: #191919; text-decoration: none; background: #ffffff;">View Details</a>
+                  </td>
+                </tr>
+              </table>${divider}
+            </td>
+          </tr>`;
+  }
+
+  if (!count) { alert('Fill in at least one job.'); return; }
+
+  generatedHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jobs for You</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+    body, table, td, p, a { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .job-title { color: #191919; text-decoration: none; }
+    .job-title:hover { text-decoration: underline; }
+    .btn-details { display: inline-block; padding: 8px 18px; border: 1.5px solid #d4d0c8; border-radius: 8px; font-size: 13px; font-weight: 600; color: #191919; text-decoration: none; background: #ffffff; }
+    .btn-details:hover { background: #f7f3ec; }
+    @media only screen and (max-width: 600px) {
+      .outer-pad { padding: 24px 16px !important; }
+      .job-row td { padding-left: 0 !important; padding-right: 0 !important; }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; width: 100%; background-color: #ffffff; font-size: 15px; line-height: 1.5; color: #191919; -webkit-font-smoothing: antialiased;">
+  <div style="display: none; max-height: 0px; overflow: hidden; mso-hide: all;">` + ' &#847;'.repeat(150) + `
+  </div>
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff;">
+    <tr>
+      <td align="center" class="outer-pad" style="padding: 40px 24px 32px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width: 480px;">
+          <tr><td align="center" style="padding-bottom: 32px;"><img src="http://cdn.mcauto-images-production.sendgrid.net/b8e738f0a339492e/d4b5b65d-4eed-48ed-aff8-521902cd4284/128x128.png" alt="Bandana" width="40" height="40" style="display: block;" /></td></tr>
+          <tr><td style="padding-bottom: 4px;"><p style="margin: 0; font-size: 15px; color: #191919;">Hi {{first_name default="there"}},</p></td></tr>
+          <tr><td style="padding-bottom: 28px;"><p style="margin: 0; font-size: 15px; color: #525252;">${greeting}</p></td></tr>
+${jobsHTML}
+          <tr><td align="center" style="padding: 32px 0 40px;"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border-radius: 999px; background-color: #FCE776;"><a href="https://bandana.com/search" target="_blank" style="display: inline-block; padding: 14px 32px; font-size: 15px; font-weight: 700; color: #191919; text-decoration: none;">See More Jobs</a></td></tr></table></td></tr>
+          <tr><td align="center" style="padding: 24px 0 0 0; border-top: 1px solid #f0f0f0;"><p style="margin: 0; font-size: 13px; color: #a3a3a3;">You're receiving this because of your job preferences on Bandana.</p></td></tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  document.getElementById('preview-frame').innerHTML = `<iframe srcdoc="${generatedHTML.replace(/"/g,'&quot;')}" style="width:100%;height:600px;border:none;"></iframe>`;
+}
+
+function copyHTML() {
+  if (!generatedHTML) generateEmail();
+  if (!generatedHTML) return;
+  navigator.clipboard.writeText(generatedHTML).then(() => showToast('HTML copied to clipboard!')).catch(() => {
+    const t = document.createElement('textarea'); t.value = generatedHTML; document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t); showToast('Copied!');
+  });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+init();
+</script>
+</body>
+</html>
